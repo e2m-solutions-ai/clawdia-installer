@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenClaw Setup · E2M</title>
+<style>
+  :root{
+    /* Anchors */
+    --e2m-black:#000;--e2m-white:#fff;
+    /* Hero + accents */
+    --e2m-blue:#1638FB;--e2m-orange:#F35700;--e2m-yellow:#FEB100;
+    /* Blue tints */
+    --e2m-blue-80:#4560fb;--e2m-blue-60:#7389fc;--e2m-blue-40:#a1b1fd;--e2m-blue-20:#d0d8fe;--e2m-blue-10:#e7ecff;
+    /* Neutrals */
+    --e2m-gray-900:#1a1a1a;--e2m-gray-700:#4d4d4d;--e2m-gray-500:#808080;--e2m-gray-300:#ccc;--e2m-gray-100:#f2f2f2;--e2m-gray-50:#fafafa;
+    /* Semantic */
+    --color-background:var(--e2m-white);--color-foreground:var(--e2m-black);
+    --color-foreground-muted:var(--e2m-gray-700);--color-accent:var(--e2m-blue);
+    --color-accent-hover:var(--e2m-blue-80);--color-border:var(--e2m-gray-300);--color-surface:var(--e2m-gray-50);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;font-family:'New Grotesk',system-ui,-apple-system,sans-serif;letter-spacing:.025em;
+    color:var(--color-foreground);background:var(--color-background);-webkit-font-smoothing:antialiased;line-height:1.67}
+
+  header{border-bottom:1px solid var(--e2m-gray-300);padding:clamp(1.25rem,4vw,2rem) clamp(1.25rem,5vw,3rem)}
+  header .bar{max-width:880px;margin:0 auto;display:flex;align-items:center;gap:1rem}
+  header img{height:40px;width:auto}
+  .eyebrow{font-weight:700;text-transform:uppercase;font-size:.72rem;letter-spacing:.12em;color:var(--e2m-blue);margin:0}
+  header h1{font-weight:300;font-size:clamp(1.75rem,4vw,2.25rem);line-height:1.3;letter-spacing:.025em;margin:.15rem 0 0}
+
+  .wrap{max-width:880px;margin:0 auto;padding:clamp(1.5rem,4vw,2.5rem) clamp(1.25rem,5vw,3rem) 4rem}
+
+  .card{background:#fff;border:1px solid var(--e2m-gray-300);border-radius:4px;
+    padding:clamp(1.25rem,3vw,1.75rem);margin-bottom:1.5rem}
+  .card .step-eyebrow{display:flex;align-items:center;gap:.6rem;margin:0 0 .25rem}
+  .card h2{font-weight:500;font-size:clamp(1.4rem,3vw,1.75rem);line-height:1.3;letter-spacing:.025em;margin:0}
+  .desc{font-weight:300;font-size:1rem;color:var(--color-foreground-muted);margin:.5rem 0 1.25rem;max-width:64ch}
+
+  label{display:block;font-weight:700;text-transform:uppercase;font-size:.72rem;letter-spacing:.05em;margin:1.1rem 0 .4rem}
+  label .opt{font-weight:300;text-transform:none;letter-spacing:.025em;color:var(--color-foreground-muted)}
+  .req{color:var(--e2m-blue)}
+  input[type=text],input[type=password]{width:100%;font:inherit;font-weight:300;font-size:1rem;
+    padding:.7rem .9rem;border:2px solid var(--e2m-black);border-radius:4px;background:#fff}
+  input:focus{outline:none;border-color:var(--e2m-blue);box-shadow:0 0 0 3px var(--e2m-blue-20)}
+
+  .cmd{background:var(--e2m-gray-900);color:var(--e2m-blue-10);border-radius:4px;padding:.7rem .9rem;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;line-height:1.55;
+    margin-top:1rem;white-space:pre-wrap;word-break:break-all}
+
+  .row{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-top:1.25rem}
+
+  button{font:inherit;font-weight:500;font-size:1rem;letter-spacing:.025em;cursor:pointer;
+    padding:.7rem 1.4rem;border-radius:4px;transition:.15s;border:2px solid transparent}
+  .btn-primary{background:var(--e2m-blue);color:#fff;border-color:var(--e2m-blue)}
+  .btn-primary:hover{background:#000;border-color:#000}
+  .btn-secondary{background:transparent;color:#000;border-color:#000}
+  .btn-secondary:hover{background:#000;color:#fff}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .copybtn{font-size:.75rem;font-weight:500;padding:.45rem .8rem;border:2px solid #000;border-radius:4px;background:#fff}
+  .copybtn:hover{background:#000;color:#fff}
+
+  /* status pill — hierarchy from weight, accent earned by blue/black */
+  .status{font-weight:700;text-transform:uppercase;font-size:.72rem;letter-spacing:.05em;
+    padding:.25rem .65rem;border-radius:999px;border:2px solid var(--e2m-gray-300);color:var(--e2m-gray-700)}
+  .status.run{border-color:var(--e2m-blue);color:var(--e2m-blue)}
+  .status.ok{border-color:#000;background:#000;color:#fff}
+  .status.err{border-color:var(--e2m-orange);color:var(--e2m-orange)}
+
+  /* note / instructions — blue left rule, never a fill */
+  .note{background:var(--e2m-gray-50);border-left:3px solid var(--e2m-blue);padding:.9rem 1.1rem;
+    border-radius:0 4px 4px 0;margin:1rem 0;font-size:.92rem;font-weight:300}
+  .note h3{font-weight:700;text-transform:uppercase;font-size:.72rem;letter-spacing:.05em;margin:0 0 .5rem}
+  .note ol{margin:.25rem 0 0;padding-left:1.2rem}
+  .note li{margin:.3rem 0}
+  .note code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85em;background:var(--e2m-blue-10);
+    padding:.05rem .3rem;border-radius:3px}
+  details{margin-top:1rem}
+  details>summary{cursor:pointer;font-weight:700;text-transform:uppercase;font-size:.72rem;letter-spacing:.05em;color:var(--e2m-blue)}
+  details[open]>summary{margin-bottom:.25rem}
+
+  /* the auth URL block — blue accent, earned */
+  .urlbox{border:2px solid var(--e2m-blue);border-radius:4px;padding:1.1rem;margin-top:1.25rem;display:none}
+  .urlbox.show{display:block}
+  .urlbox .lead{font-weight:700;text-transform:uppercase;font-size:.72rem;letter-spacing:.05em;margin:0}
+  .urlbox a{color:var(--e2m-blue);text-underline-offset:3px;word-break:break-all;font-size:.9rem;
+    font-family:ui-monospace,Menlo,Consolas,monospace;display:inline-block;margin:.5rem 0}
+  .divider{border:0;border-top:1px solid var(--e2m-gray-300);margin:1.1rem 0}
+
+  /* terminal output block (telegram + gateway only) */
+  .out{display:none;white-space:pre-wrap;background:var(--e2m-gray-900);color:var(--e2m-blue-10);
+    border-radius:4px;padding:1rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;
+    line-height:1.5;margin-top:1.25rem;max-height:320px;overflow:auto}
+  .out.show{display:block}
+
+  /* codex clean status message — no terminal */
+  .cx-msg{display:none;margin-top:1.25rem;font-weight:300;font-size:1rem;padding:.9rem 1.1rem;border-radius:4px}
+  .cx-msg.show{display:block}
+  .cx-msg.ok{background:#000;color:#fff}
+  .cx-msg.err{border-left:3px solid var(--e2m-orange);background:var(--e2m-gray-50)}
+
+  /* pairing request rows */
+  .pair-item{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;
+    border:1px solid var(--e2m-gray-300);border-radius:4px;padding:.85rem 1rem;margin-bottom:.6rem}
+  .pair-item .who{font-weight:500}
+  .pair-item .meta{font-weight:300;color:var(--color-foreground-muted);font-size:.85rem}
+  .pair-item code{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;
+    background:var(--e2m-blue-10);color:var(--e2m-blue);padding:.1rem .45rem;border-radius:3px}
+  .pair-item .grow{flex:1;min-width:160px}
+  .pair-empty{color:var(--color-foreground-muted);font-weight:300}
+
+  .footer{max-width:880px;margin:0 auto;padding:0 clamp(1.25rem,5vw,3rem);color:var(--color-foreground-muted);
+    font-weight:300;font-size:.8rem}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <img id="logo" alt="E2M" />
+    <div>
+      <p class="eyebrow">OpenClaw · First-time setup</p>
+      <h1>Connect Telegram & Codex</h1>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- STEP 1 · TELEGRAM -->
+  <section class="card">
+    <p class="step-eyebrow"><span class="eyebrow">Step 1</span> <span class="status" id="tg-badge">Not started</span></p>
+    <h2>Telegram</h2>
+    <p class="desc">Connect your Telegram bot. You need a <b>bot token</b> from BotFather and,
+      optionally, your numeric <b>user ID</b> so you’re allowed to approve actions.</p>
+
+    <label for="botToken">Bot token <span class="req">*</span></label>
+    <input id="botToken" type="password" placeholder="123456789:AA…" autocomplete="off" />
+
+    <label for="ownerIds">User ID(s) <span class="opt">— optional, comma-separated</span></label>
+    <input id="ownerIds" type="text" placeholder="123456789, 987654321" autocomplete="off" />
+
+    <details>
+      <summary>How do I get these?</summary>
+      <div class="note">
+        <h3>Get your bot token</h3>
+        <ol>
+          <li>In Telegram, open a chat with <b>@BotFather</b>.</li>
+          <li>Send <code>/newbot</code> and follow the prompts (name + username ending in <code>bot</code>).</li>
+          <li>BotFather replies with a token like <code>123456789:AAH…</code> — paste it above.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <h3>Get your user ID</h3>
+        <ol>
+          <li>In Telegram, open a chat with <b>@userinfobot</b> (or <b>@RawDataBot</b>).</li>
+          <li>Press <b>Start</b> — it replies with your numeric <code>Id</code> (e.g. <code>123456789</code>).</li>
+          <li>Paste that number above. Add several, comma-separated, to allow more people.</li>
+        </ol>
+      </div>
+    </details>
+
+    <div class="cmd" id="tg-cmd">openclaw channels add --channel telegram --token &lt;BOT_TOKEN&gt;</div>
+
+    <div class="row">
+      <button class="btn-secondary" id="tg-test">Test &amp; send confirmation</button>
+      <button class="btn-primary" id="tg-run" style="display:none">Add Telegram channel</button>
+    </div>
+    <p class="desc" style="margin:.75rem 0 0;font-size:.85rem">Tip: the client must open the bot in Telegram and press <b>Start</b> before it can receive the confirmation message.</p>
+    <pre class="out" id="tg-out"></pre>
+  </section>
+
+  <!-- STEP 2 · APPROVE TELEGRAM USERS -->
+  <section class="card">
+    <p class="step-eyebrow"><span class="eyebrow">Step 2</span> <span class="status" id="pair-badge">Not started</span></p>
+    <h2>Approve Telegram users</h2>
+    <p class="desc">When someone messages your bot for the first time, OpenClaw shows them a
+      <b>pairing code</b> and waits for the owner to approve. Approve them here — they’ll be
+      notified in Telegram once allowed. (Pending requests appear once the gateway is running
+      and the person has messaged the bot.)</p>
+
+    <div class="row">
+      <button class="btn-primary" id="pair-refresh">Refresh pending requests</button>
+    </div>
+
+    <div id="pair-list" style="margin-top:1.25rem"></div>
+
+    <details>
+      <summary>Approve by code manually</summary>
+      <div style="margin-top:.75rem">
+        <input id="pair-code" type="text" placeholder="e.g. KSWSKD64" autocomplete="off" />
+        <div class="row"><button class="btn-secondary" id="pair-approve">Approve code</button></div>
+      </div>
+    </details>
+
+    <pre class="out" id="pair-out"></pre>
+  </section>
+
+  <!-- STEP 3 · CODEX -->
+  <section class="card">
+    <p class="step-eyebrow"><span class="eyebrow">Step 3</span> <span class="status" id="cx-badge">Not started</span></p>
+    <h2>Codex (ChatGPT / OpenAI)</h2>
+    <p class="desc">Sign in with your ChatGPT / Codex subscription. Start the flow, open the URL
+      in your browser, sign in, then paste the authorization code back here.</p>
+
+    <div class="row"><button class="btn-primary" id="cx-start">Start Codex login</button></div>
+
+    <div class="urlbox" id="cx-urlbox">
+      <p class="lead">A · Open this URL and sign in</p>
+      <a id="cx-url" href="#" target="_blank" rel="noopener"></a><br/>
+      <button class="copybtn" id="cx-copy">Copy URL</button>
+
+      <hr class="divider" />
+      <p class="lead">B · Paste the authorization code</p>
+      <input id="cx-code" type="text" placeholder="code#state  or  full localhost redirect URL" autocomplete="off" style="margin-top:.5rem" />
+      <div class="row"><button class="btn-primary" id="cx-submit">Submit code</button></div>
+      <p class="desc" style="margin:.75rem 0 0;font-size:.85rem">If the browser shows a “can’t reach localhost” page after sign-in, copy that page’s full URL — it contains the code.</p>
+    </div>
+
+    <div class="cx-msg" id="cx-msg"></div>
+  </section>
+
+  <!-- STEP 4 · GATEWAY -->
+  <section class="card">
+    <p class="step-eyebrow"><span class="eyebrow">Step 4</span> <span class="status" id="gw-badge">Not started</span></p>
+    <h2>Start / restart gateway</h2>
+    <p class="desc">Apply your configuration. On first run this installs and starts the gateway service; after that it just restarts it.</p>
+    <div class="cmd">openclaw config set gateway.mode local
+openclaw gateway install --force
+openclaw gateway restart</div>
+    <div class="row">
+      <button class="btn-primary" id="gw-run">Start / restart gateway</button>
+      <button class="btn-secondary" id="status-run">Show status</button>
+    </div>
+    <pre class="out" id="gw-out"></pre>
+  </section>
+
+</div>
+
+<p class="footer">OpenClaw setup · styled with the E2M brand kit.</p>
+
+<script>
+// E2M logo (blue, for light backgrounds) — embedded data-URI, used verbatim.
+const E2M_LOGO_BLUE = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8IS0tIEdlbmVyYXRvcjogQWRvYmUgSWxsdXN0cmF0b3IgMzAuMy4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogMi4xLjMgQnVpbGQgMTgyKSAgLS0+CiAgPHJlY3QgeD0iNDAuNzIiIHk9IjIxLjQ0IiB3aWR0aD0iNDM0Ljg1IiBoZWlnaHQ9IjIxMi4xNyIgZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiLz4KICA8cmVjdCB4PSIyNzcuNDUiIHk9IjI2Mi4xIiB3aWR0aD0iMjIwLjAzIiBoZWlnaHQ9IjIzMS44MiIgZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiLz4KICA8cGF0aCBkPSJNNDc1LjU3LDQ2NC42OWgtNDYuODJ2LTgwLjMxbC0zMC42NSw3MS4xN2gtMjguMTZsLTMwLjY2LTcxLjE3djgwLjMxaC00Ni44di0xNjEuMzZoNDkuNTRsNDEuOTQsOTIuODEsNDIuMDctOTIuODFoNDkuNTV2MTYxLjM2Wk0zODMuODMsNDYuMDhjMzYuODMsMCw2Mi4wMywyMS41MSw2Mi4wMyw1My43MiwwLDI3LjY3LTI1Ljc4LDQ2LjU3LTQ4LjczLDYyLjg0LTMuNTYsMi41MS0xMC41Nyw4LjItMTAuOTMsOC42OWg2MC42djM4LjYxaC0xMjAuMDF2LTE2Ljg3YzAtMjcuMzMsMTUuNTctMzYuNzIsNDcuMTgtNjAuOTYsMTYuNTEtMTIuNywyMy43Ny0xOS45NiwyMy43Ny0zMS4xMiwwLTkuMzktNi40My0xNS42OC0xNi44Ny0xNS42OC0xMS4xOCwwLTIwLjMyLDkuMzktMjQuODQsMjAuM2wtMzQuODItMTUuNTVjNi4wNy0xOS45NiwyNi45Ny00My45Nyw2Mi42Mi00My45N2gwWk0xODcuNTIsMjA4LjY5aC0xMTkuMDVWNDcuMzNoMTE3Ljg2djM4LjA0aC03MC41N3YyMi4zNGg2MS45djM3LjloLTYxLjl2MjUuMThoNzEuNzZ2MzcuOWgwWk0wLDB2MjU2LjAyaDI1Ni4wMnYyNTUuOThoMjU1Ljk4VjBIMFoiIGZpbGw9IiMxNjM4ZmIiLz4KPC9zdmc+";
+document.getElementById('logo').src = E2M_LOGO_BLUE;
+
+const $ = (id) => document.getElementById(id);
+function setBadge(el, state, text){ el.className = "status " + state; el.textContent = text; }
+function showOut(el, text){ el.textContent = text || "(no output)"; el.classList.add("show"); }
+// Forward any ?key=… (used when the UI is exposed behind a proxy/tunnel) to the API.
+const UI_KEY = new URLSearchParams(location.search).get("key");
+function api(path){ return UI_KEY ? path + (path.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(UI_KEY) : path; }
+async function post(url, body){
+  const r = await fetch(api(url), {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body||{})});
+  return r.json();
+}
+async function get(url){ return (await fetch(api(url))).json(); }
+
+// live command preview for telegram
+function updateTgCmd(){
+  const t = $("botToken").value.trim();
+  let cmd = "openclaw channels add --channel telegram --token " + (t ? "••••••" : "<BOT_TOKEN>");
+  const o = $("ownerIds").value.trim();
+  if (o) cmd += "\nopenclaw config set commands.ownerAllowFrom '[\"" +
+    o.split(/[,\s]+/).filter(Boolean).join('","') + "\"]'";
+  $("tg-cmd").textContent = cmd;
+  // Editing the token/ID invalidates the prior test — re-hide the add button.
+  $("tg-run").style.display = "none";
+}
+$("botToken").addEventListener("input", updateTgCmd);
+$("ownerIds").addEventListener("input", updateTgCmd);
+
+// 1. Telegram — test (validate token + send confirmation) before adding
+$("tg-test").onclick = async () => {
+  const btn = $("tg-test"); btn.disabled = true; setBadge($("tg-badge"), "run", "Testing…");
+  try {
+    const res = await post("/api/telegram/test", {botToken:$("botToken").value, ownerIds:$("ownerIds").value});
+    showOut($("tg-out"), res.output);
+    setBadge($("tg-badge"), res.ok ? "ok" : "err", res.ok ? "Test passed" : "Test failed");
+    // Only reveal "Add Telegram channel" once the test passes.
+    $("tg-run").style.display = res.ok ? "" : "none";
+  } catch (e){ showOut($("tg-out"), String(e)); setBadge($("tg-badge"), "err", "Error"); $("tg-run").style.display = "none"; }
+  btn.disabled = false;
+};
+$("tg-run").onclick = async () => {
+  const btn = $("tg-run"); btn.disabled = true; setBadge($("tg-badge"), "run", "Running…");
+  try {
+    const res = await post("/api/telegram", {botToken:$("botToken").value, ownerIds:$("ownerIds").value});
+    showOut($("tg-out"), res.output);
+    setBadge($("tg-badge"), res.ok ? "ok" : "err", res.ok ? "Added" : "Failed");
+  } catch (e){ showOut($("tg-out"), String(e)); setBadge($("tg-badge"), "err", "Error"); }
+  btn.disabled = false;
+};
+
+// 2. Codex — no terminal output, clean status only
+let codexSession = null;
+function cxMsg(state, text){ const m=$("cx-msg"); m.className="cx-msg show "+state; m.textContent=text; }
+$("cx-start").onclick = async () => {
+  const btn = $("cx-start"); btn.disabled = true; setBadge($("cx-badge"), "run", "Starting…");
+  $("cx-msg").className = "cx-msg";
+  try {
+    const res = await post("/api/codex/start", {});
+    codexSession = res.sessionId;
+    if (res.url){
+      $("cx-url").href = res.url; $("cx-url").textContent = res.url;
+      $("cx-urlbox").classList.add("show");
+      setBadge($("cx-badge"), "run", "Awaiting code");
+    } else {
+      setBadge($("cx-badge"), "err", "Failed");
+      cxMsg("err", "Couldn’t start the login flow. Make sure OpenClaw is installed and try again.");
+    }
+  } catch (e){ setBadge($("cx-badge"), "err", "Error"); cxMsg("err", String(e)); }
+  btn.disabled = false;
+};
+$("cx-copy").onclick = () => navigator.clipboard.writeText($("cx-url").textContent);
+$("cx-submit").onclick = async () => {
+  const code = $("cx-code").value.trim(); if (!code) return;
+  const btn = $("cx-submit"); btn.disabled = true; setBadge($("cx-badge"), "run", "Verifying…");
+  try {
+    const res = await post("/api/codex/submit", {sessionId:codexSession, code});
+    if (res.ok){
+      setBadge($("cx-badge"), "ok", "Signed in");
+      $("cx-urlbox").classList.remove("show");
+      cxMsg("ok", "Signed in to OpenAI. You can now restart the gateway in Step 3.");
+    } else if (res.done){
+      setBadge($("cx-badge"), "err", "Failed");
+      cxMsg("err", "Login didn’t complete. Double-check the code (or paste the full redirect URL) and start again.");
+    } else {
+      setBadge($("cx-badge"), "run", "Still working");
+      cxMsg("err", "Still waiting on OpenAI. Give it a moment, then submit again if nothing happens.");
+    }
+  } catch (e){ setBadge($("cx-badge"), "err", "Error"); cxMsg("err", String(e)); }
+  btn.disabled = false;
+};
+
+// 3. Gateway
+$("gw-run").onclick = async () => {
+  const btn = $("gw-run"); btn.disabled = true; setBadge($("gw-badge"), "run", "Applying…");
+  try {
+    const res = await post("/api/gateway/restart", {});
+    showOut($("gw-out"), res.output);
+    setBadge($("gw-badge"), res.ok ? "ok" : "err", res.ok ? "Gateway up" : "See output");
+  } catch (e){ showOut($("gw-out"), String(e)); setBadge($("gw-badge"), "err", "Error"); }
+  btn.disabled = false;
+};
+$("status-run").onclick = async () => {
+  showOut($("gw-out"), "Loading status…");
+  try { showOut($("gw-out"), (await get("/api/status")).output); }
+  catch (e){ showOut($("gw-out"), String(e)); }
+};
+
+// 4. Approve Telegram users (pairing)
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+async function approveCode(code){
+  setBadge($("pair-badge"), "run", "Approving…");
+  const res = await post("/api/telegram/approve", {code});
+  showOut($("pair-out"), res.output);
+  setBadge($("pair-badge"), res.ok ? "ok" : "err", res.ok ? "Approved" : "Failed");
+  refreshPairing();
+}
+function renderPairing(reqs){
+  const box = $("pair-list");
+  if (!reqs || !reqs.length){ box.innerHTML = '<p class="pair-empty">No pending requests. Ask the person to message your bot, then refresh.</p>'; return; }
+  box.innerHTML = reqs.map(r => {
+    const name = r.meta && (r.meta.username ? "@"+r.meta.username : r.meta.firstName) || "Telegram user";
+    return `<div class="pair-item">
+      <div class="grow"><span class="who">${esc(name)}</span>
+        <div class="meta">user id ${esc(r.id)} · code <code>${esc(r.code)}</code></div></div>
+      <button class="btn-primary" data-code="${esc(r.code)}">Approve</button>
+    </div>`;
+  }).join("");
+  box.querySelectorAll("button[data-code]").forEach(b => b.onclick = () => approveCode(b.dataset.code));
+}
+async function refreshPairing(){
+  setBadge($("pair-badge"), "run", "Loading…");
+  try {
+    const res = await get("/api/telegram/pairing");
+    if (res.ok){
+      renderPairing(res.requests);
+      setBadge($("pair-badge"), res.requests.length ? "run" : "ok", res.requests.length ? (res.requests.length+" pending") : "None pending");
+    } else {
+      $("pair-list").innerHTML = "";
+      showOut($("pair-out"), res.output || "Could not read pairing requests.");
+      setBadge($("pair-badge"), "err", "Error");
+    }
+  } catch (e){ showOut($("pair-out"), String(e)); setBadge($("pair-badge"), "err", "Error"); }
+}
+$("pair-refresh").onclick = refreshPairing;
+$("pair-approve").onclick = () => { const c = $("pair-code").value.trim(); if (c) approveCode(c); };
+</script>
+</body>
+</html>
