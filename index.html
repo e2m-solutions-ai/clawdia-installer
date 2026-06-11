@@ -166,7 +166,7 @@
       <button class="btn-secondary" id="tg-test">Test &amp; send confirmation</button>
       <button class="btn-primary" id="tg-run" style="display:none">Add Telegram channel</button>
     </div>
-    <p class="desc" style="margin:.75rem 0 0;font-size:.85rem">Tip: the client must open the bot in Telegram and press <b>Start</b> before it can receive the confirmation message.</p>
+    <p class="desc" style="margin:.75rem 0 0;font-size:.85rem">Tip: the client must open the bot in Telegram and press <b>Start</b> before it can receive the confirmation message. Adding the channel also <b>restarts the gateway</b> so the bot goes live — then ask the client to send <b>“hi”</b> so their pairing request shows up in Step 2.</p>
     <pre class="out" id="tg-out"></pre>
   </section>
 
@@ -283,11 +283,17 @@ $("tg-test").onclick = async () => {
   btn.disabled = false;
 };
 $("tg-run").onclick = async () => {
-  const btn = $("tg-run"); btn.disabled = true; setBadge($("tg-badge"), "run", "Running…");
+  const btn = $("tg-run"); btn.disabled = true; setBadge($("tg-badge"), "run", "Adding & restarting…");
   try {
     const res = await post("/api/telegram", {botToken:$("botToken").value, ownerIds:$("ownerIds").value});
     showOut($("tg-out"), res.output);
-    setBadge($("tg-badge"), res.ok ? "ok" : "err", res.ok ? "Added" : "Failed");
+    setBadge($("tg-badge"), res.ok ? "ok" : "err", res.ok ? "Added & live" : "Failed");
+    if (res.ok){
+      // Bot is restarted and live — the client should now message it so a
+      // pairing request appears in Step 2. Prime that step automatically.
+      setBadge($("pair-badge"), "run", "Waiting for “hi”");
+      refreshPairing();
+    }
   } catch (e){ showOut($("tg-out"), String(e)); setBadge($("tg-badge"), "err", "Error"); }
   btn.disabled = false;
 };
@@ -321,7 +327,7 @@ $("cx-submit").onclick = async () => {
     if (res.ok){
       setBadge($("cx-badge"), "ok", "Signed in");
       $("cx-urlbox").classList.remove("show");
-      cxMsg("ok", "Signed in to OpenAI. You can now restart the gateway in Step 3.");
+      cxMsg("ok", "Signed in to OpenAI. You can now restart the gateway in Step 4.");
     } else if (res.done){
       setBadge($("cx-badge"), "err", "Failed");
       cxMsg("err", "Login didn’t complete. Double-check the code (or paste the full redirect URL) and start again.");

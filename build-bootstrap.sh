@@ -7,8 +7,9 @@ cd "$(dirname "$0")"
 [ -f server.py ]  || { echo "server.py not found"; exit 1; }
 [ -f index.html ] || { echo "index.html not found"; exit 1; }
 
-SERVER_B64=$(base64 -w0 server.py)
-INDEX_B64=$(base64 -w0 index.html)
+# Portable base64 (GNU `-w0` isn't supported on macOS/BSD), single line.
+SERVER_B64=$(base64 < server.py | tr -d '\n')
+INDEX_B64=$(base64 < index.html | tr -d '\n')
 OUT=bootstrap.sh
 
 # --- top of bootstrap.sh (literal; no expansion here) ---

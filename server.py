@@ -32,7 +32,7 @@ import urllib.error
 import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOST = os.environ.get("HOST", "127.0.0.1")
@@ -82,6 +82,29 @@ def run_cmd(args, timeout=120):
 # Telegram Bot API helper — validate the token + send a confirmation message
 # directly (no gateway needed), so the connection can be tested before adding.
 # ---------------------------------------------------------------------------
+
+def gateway_apply():
+    """Bring the gateway up (first-time install + start) or restart it.
+
+    Idempotent: ensures gateway.mode=local, (re)installs the service, then
+    restarts it. On a fresh box a plain `gateway restart` fails because no
+    service exists yet, so we install first. Equivalent to:
+        openclaw config set gateway.mode local
+        openclaw gateway install --force
+        openclaw gateway restart
+    """
+    steps = [
+        ("config set gateway.mode local", ["config", "set", "gateway.mode", "local"]),
+        ("gateway install --force",       ["gateway", "install", "--force"]),
+        ("gateway restart",               ["gateway", "restart"]),
+    ]
+    out, ok = [], True
+    for label, args in steps:
+        res = run_cmd(args, timeout=120)
+        out.append(f"$ openclaw {label}\n{res['output'].strip()}")
+        ok = ok and res["ok"]
+    return {"ok": ok, "output": "\n\n".join(out)}
+
 
 def tg_call(token, method, params=None, timeout=15):
     url = f"https://api.telegram.org/bot{token}/{method}"
@@ -186,6 +209,9 @@ class PtySession:
         self.lock = threading.Lock()
         self.done = False
         self.exit_code = None
+        # The OAuth redirect_uri parsed out of the auth URL (e.g.
+        # http://localhost:1455/auth/callback) — where we deliver the code.
+        self.redirect_uri = None
 
     def start(self):
         import pty
@@ -292,6 +318,53 @@ SESSIONS = {}
 SESSIONS_LOCK = threading.Lock()
 
 
+CODEX_CALLBACK_PORT = 1455  # OpenClaw's local OAuth listener
+
+
+def _http_get(url, timeout=20):
+    """GET a URL (used to hit the local OAuth callback) and summarise the reply."""
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url), timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", "replace")
+            return {"ok": True, "text": f"HTTP {resp.status}\n{strip_ansi(body)[:500]}"}
+    except urllib.error.HTTPError as exc:
+        try:
+            body = exc.read().decode("utf-8", "replace")
+        except Exception:
+            body = ""
+        return {"ok": False, "text": f"HTTP {exc.code}\n{strip_ansi(body)[:500]}"}
+    except Exception as exc:
+        return {"ok": False, "text": f"could not reach local callback: {exc}"}
+
+
+def _codex_callback_url(pasted, redirect_uri):
+    """Turn what the user pasted into the local callback URL we can curl.
+
+    Accepts either the full localhost redirect URL the browser landed on, or a
+    bare code / "code#state". The host:port is always forced to the loopback
+    listener so it reaches OpenClaw on this machine (the client's browser can't).
+    """
+    pasted = (pasted or "").strip()
+    netloc = f"127.0.0.1:{CODEX_CALLBACK_PORT}"
+    if pasted.lower().startswith(("http://", "https://")):
+        u = urlparse(pasted)
+        if not u.query:
+            return None
+        return urlunparse(("http", netloc, u.path or "/auth/callback", "", u.query, ""))
+    # Bare value: "code", "code#state", or "code&state=..."
+    code, state = pasted, ""
+    if "#" in pasted:
+        code, state = pasted.split("#", 1)
+    if not code:
+        return None
+    base = redirect_uri or f"http://{netloc}/auth/callback"
+    path = urlparse(base).path or "/auth/callback"
+    query = {"code": code}
+    if state:
+        query["state"] = state
+    return urlunparse(("http", netloc, path, "", urlencode(query), ""))
+
+
 def codex_start():
     args = base_args() + ["models", "auth", "login", "--provider", "openai", "--method", "oauth"]
     sess = PtySession(args)
@@ -299,6 +372,12 @@ def codex_start():
     sess._drain(deadline=35.0, until=URL_RE, settle=1.2)  # read until the auth URL appears
     text = sess.clean()
     match = URL_RE.search(text)
+    if match:
+        # Remember where OpenClaw expects the code delivered (its callback URL).
+        try:
+            sess.redirect_uri = parse_qs(urlparse(match.group(0)).query).get("redirect_uri", [None])[0]
+        except Exception:
+            sess.redirect_uri = None
     sid = uuid.uuid4().hex
     with SESSIONS_LOCK:
         SESSIONS[sid] = sess
@@ -314,12 +393,32 @@ def codex_submit(sid, code):
         return {"ok": False, "output": "No active Codex login session. Click 'Start Codex login' again."}
     if sess.done:
         return {"ok": False, "output": "Session already finished. Start a new login if needed."}
+    code = (code or "").strip()
+    if not code:
+        return {"ok": False, "output": "Paste the authorization code (or the full redirect URL) first."}
     before = len(sess.buf)
-    sess.write_line(code.strip())
-    # Wait for the process to exit (success) or, if it re-prompts, fall back to
-    # an idle timeout. Token exchange has network gaps, so keep idle generous.
-    sess._drain(idle=3.0, deadline=60.0)
+
+    # Primary path: deliver the code to OpenClaw's local OAuth listener by
+    # curling the callback here on the server. On a remote box the client's
+    # browser can't reach localhost, so we complete the handshake for them.
+    note = ""
+    callback = _codex_callback_url(code, sess.redirect_uri)
+    if callback:
+        res = _http_get(callback)
+        note = f"$ curl '{callback}'\n{res['text']}"
+        if res["ok"]:
+            sess._drain(idle=2.0, deadline=30.0)  # let the login process finish & exit
+
+    # Fallback: some builds want the code pasted into the interactive prompt
+    # instead of (or in addition to) the listener. Only do this if the curl
+    # path didn't already finish the login.
+    if not sess.done:
+        sess.write_line(code)
+        sess._drain(idle=3.0, deadline=60.0)
+
     text = sess.clean()
+    if note:
+        text = note + "\n\n" + text
     new_output = strip_ansi(sess.buf[before:])
     ok = sess.done and (sess.exit_code in (0, None)) and "error" not in new_output.lower()
     if sess.done:
@@ -403,23 +502,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, b"not found")
 
     def _gateway_apply(self):
-        """Bring the gateway up (first-time install + start) or restart it.
-
-        Idempotent: ensures gateway.mode=local, (re)installs the service, then
-        restarts it. On a fresh box a plain `gateway restart` fails because no
-        service exists yet, so we install first.
-        """
-        steps = [
-            ("config set gateway.mode local", ["config", "set", "gateway.mode", "local"]),
-            ("gateway install --force",       ["gateway", "install", "--force"]),
-            ("gateway restart",               ["gateway", "restart"]),
-        ]
-        out, ok = [], True
-        for label, args in steps:
-            res = run_cmd(args, timeout=120)
-            out.append(f"$ openclaw {label}\n{res['output'].strip()}")
-            ok = ok and res["ok"]
-        return {"ok": ok, "output": "\n\n".join(out)}
+        return gateway_apply()
 
     def _telegram(self, body):
         token = (body.get("botToken") or "").strip()
@@ -437,6 +520,16 @@ class Handler(BaseHTTPRequestHandler):
                 steps.append(("config set ownerAllowFrom", cfg))
                 ok = ok and cfg["ok"]
         output = "\n".join(f"$ openclaw {label}\n{res['output'].strip()}" for label, res in steps)
+        # Once the channel is added, force-restart the gateway so the bot goes
+        # live. Only then can the client message it and have a pairing request
+        # show up in Step 2.
+        if ok:
+            gw = gateway_apply()
+            ok = ok and gw["ok"]
+            output += "\n\n" + gw["output"]
+            output += ("\n\n→ Bot is live. Ask the client to open the bot in Telegram and "
+                       "send \"hi\". Their pairing request then appears in Step 2 — "
+                       "Refresh and approve it.")
         return {"ok": ok, "output": output}
 
 

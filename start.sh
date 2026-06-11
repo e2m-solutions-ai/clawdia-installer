@@ -28,7 +28,9 @@ add_openclaw_to_path() {
 add_openclaw_to_path
 if ! command -v openclaw >/dev/null 2>&1; then
   echo "==> OpenClaw not found. Installing..."
-  curl -fsSL https://openclaw.ai/install.sh | bash
+  # --no-onboard: skip OpenClaw's built-in setup wizard (it would prompt to
+  # connect Telegram/Codex). We drive that ourselves from this setup UI instead.
+  curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
   add_openclaw_to_path
 fi
 
