@@ -424,6 +424,12 @@ def codex_submit(sid, code):
     if sess.done:
         with SESSIONS_LOCK:
             SESSIONS.pop(sid, None)
+    # Once the login is in, restart the gateway so it picks up the new Codex
+    # credentials/config (they don't take effect until the gateway reloads).
+    if ok:
+        gw = gateway_apply()
+        ok = ok and gw["ok"]
+        text += "\n\n" + gw["output"]
     return {"ok": ok, "output": text, "done": sess.done, "exitCode": sess.exit_code}
 
 

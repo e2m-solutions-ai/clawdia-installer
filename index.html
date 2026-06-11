@@ -327,7 +327,7 @@ $("cx-submit").onclick = async () => {
     if (res.ok){
       setBadge($("cx-badge"), "ok", "Signed in");
       $("cx-urlbox").classList.remove("show");
-      cxMsg("ok", "Signed in to OpenAI. You can now restart the gateway in Step 4.");
+      cxMsg("ok", "Signed in to OpenAI — the gateway was restarted automatically so the Codex config is now live.");
     } else if (res.done){
       setBadge($("cx-badge"), "err", "Failed");
       cxMsg("err", "Login didn’t complete. Double-check the code (or paste the full redirect URL) and start again.");
