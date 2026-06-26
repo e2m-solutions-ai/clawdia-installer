@@ -22,7 +22,7 @@ start_ngrok() {
     install_ngrok
 
     read -p "Enter ngrok auth token: " NGROK_TOKEN
-    read -p "Enter ngrok domain (e.g. clawdia-one18media.ngrok.app): " NGROK_DOMAIN
+    read -p "Enter ngrok domain (e.g. clawdia-client_name.ngrok.app): " NGROK_DOMAIN
 
     ngrok config add-authtoken "$NGROK_TOKEN"
 
